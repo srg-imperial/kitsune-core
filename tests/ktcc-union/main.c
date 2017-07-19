@@ -24,6 +24,7 @@ int main(int argc, char **argv)
 
   node = (PreprocPostConfigFuncNode *)malloc(sizeof(PreprocPostConfigFuncNode));
   node->data = (int*)7; 
+  node->next = NULL;
   node->unionfptr.fptr = foo;
   printf("main.c: this should be foo: %p, and foo is = %p\n", node->unionfptr.fptr, foo);
 
