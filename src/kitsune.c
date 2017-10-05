@@ -16,6 +16,8 @@
 #include <string.h>
 #include <search.h>
 
+#include <fcntl.h>
+
 #include "kitsune_internal.h"
 #include "stackvars_internal.h"
 #include "registervars_internal.h"
@@ -302,6 +304,20 @@ void kitsune_update(const char *pt_name)
     ktthread_rapidq();
     if (ktthread_is_main()) {
 #endif
+
+      /*
+       * Let MVEDSUA know that we are ready to update and check if we are the
+       * leader and should not update (negative return), or the follower and
+       * should update (non-negative return).
+       * When running without MVEDSUA, this open syscall always fails with a
+       * negative return.
+       */
+      if (open("MVEDSUA_UPDATE", 0) > 0) {
+        kitsune_log("Update canceled(%s)...\n", pt_name);
+        kitsune_clear_request();
+        return;
+      }
+
       /*
        * To update, we store the current update point taken to make it available
        * to the next version 
