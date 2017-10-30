@@ -1,9 +1,14 @@
 #include <assert.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <asm/prctl.h>
 #include "kitsune_internal.h"
 #include "ktthreads.h"
 #include "stackvars_internal.h"
+
+/* glibc does not declare prototypes for arch_prctl anymore */
+int arch_prctl(int,void*);
 
 typedef struct threadinfo {
   ktthread_info info;
@@ -23,6 +28,9 @@ typedef struct threadinfo {
   /* Thread list links */
   struct threadinfo *prev;
   struct threadinfo *next;
+
+  /* Mvedsua state */
+  void * mvedsua_state;
 } threadinfo;
 void ktthreads_execute_update_callback(threadinfo * t);
 
@@ -124,6 +132,12 @@ static void *thread_wrap(void *data)
   if (kitsune_is_updating()) {
     stackvars_flip();
   }
+  if (tinfo->mvedsua_state != NULL) {
+    /* Restore Mvedusa state */
+    open(tinfo->mvedsua_state, 0);
+    free(tinfo->mvedsua_state);
+    tinfo->mvedsua_state = NULL;
+  }
   return tinfo->info.start_fun(tinfo->info.arg);
 }
 
@@ -168,6 +182,7 @@ int kitsune_pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   pthread_mutex_init(&tinfo->thread_mutex, ktthreads_mutex_attr);
   tinfo->stackvars_top = NULL;
   tinfo->stackvars_top_old = NULL;
+  tinfo->mvedsua_state = NULL;
 
 
   /* add the thread metadata to the list of active threads */
@@ -300,7 +315,24 @@ void ktthread_do_update(const char *pt_name)
 {
   assert(!ktthread_is_main());
   assert(!kitsune_is_updating());
-  cur_threadinfo()->info.update_pt = pt_name;
+  threadinfo * tinfo = cur_threadinfo();
+  tinfo->info.update_pt = pt_name;
+
+  tinfo->mvedsua_state = malloc(128 * sizeof(char));
+  memset(tinfo->mvedsua_state, 0, 128 * sizeof(char));
+  memcpy(tinfo->mvedsua_state, "MVEDSUA_UPDATE_THREAD", sizeof("MVEDSUA_UPDATE_THREAD"));
+  int ret = open(tinfo->mvedsua_state, 0);
+  kitsune_log("Update ret: %d\n", ret);
+  if (ret >= 0) {
+    kitsune_log("Update canceled(%s)...\n", pt_name);
+    kitsune_clear_request();
+    free(tinfo->mvedsua_state);
+    tinfo->mvedsua_state = NULL;
+    tinfo->info.update_pt = NULL;
+    return;
+  }
+
+  kitsune_log("Update not canceled(%s)...\n", pt_name);
   pthread_exit(0);
 }
 

@@ -312,7 +312,10 @@ void kitsune_update(const char *pt_name)
        * When running without MVEDSUA, this open syscall always fails with a
        * negative return.
        */
-      if (open("MVEDSUA_UPDATE", 0) > 0) {
+      char buffer[128] = "MVEDSUA_UPDATE";
+      int ret = open(buffer, 0);
+      kitsune_log("Update ret: %d\n", ret);
+      if (ret >= 0) {
         kitsune_log("Update canceled(%s)...\n", pt_name);
         kitsune_clear_request();
         return;
@@ -329,6 +332,8 @@ void kitsune_update(const char *pt_name)
        */
       assert(jmp_env != NULL);
       longjmp(*jmp_env, 1);
+      // Shouldn't get here
+      assert(false);
 #ifdef ENABLE_THREADING
     } else {
       ktthread_do_update(pt_name);
