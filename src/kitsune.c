@@ -37,6 +37,8 @@
  */
 extern int main(int, char**);
 
+static void (*mvedsua_update_fn)() = NULL;
+
 /*
  * Global Variables
  * ================
@@ -91,6 +93,8 @@ char **next_version_code = NULL;
  */
 int kitsune_has_updated_p = 0;
 
+static void do_nothing() { /* Empty */ }
+
 /*
  * Entry Point
  * ===========
@@ -111,6 +115,20 @@ int kitsune_init_inplace(jmp_buf *env, void *prev_handle, void *cur_handle,
 {
   /* We've beguin executing code in this version. */
   is_loading = 0;
+
+  if (mvedsua_update_fn == NULL) {
+    char path[] = "MVEDSUA_UPDATE_PT";
+    int fd = open(path, 0);
+    if (fd == 0) {
+      // Running with mvedsua, path has pointer to function to call at update pts
+      long * path_as_long = (long*)path;
+      mvedsua_update_fn = (void(*)()) *path_as_long;
+      mvedsua_update_fn();
+    } else {
+      // Running without mvedsua
+      mvedsua_update_fn = do_nothing;
+    }
+  }
 
   jmp_env = env;
   prev_ver_handle = prev_handle;
@@ -340,6 +358,9 @@ void kitsune_update(const char *pt_name)
     }
 #endif
   }
+
+  // Let mvedsua know that we reached an update point
+  mvedsua_update_fn();
 }
 
 /*
