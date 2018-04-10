@@ -60,7 +60,7 @@ char *get_upd_path()
   if (fp) {
     char *result = malloc(sizeof(char) * 256);
     fgets(result, 255, fp);
-    unlink(filename);
+    //unlink(filename);
     return result;
   } else {
     /* note that it might eventually be preferable to check the existence of the
@@ -99,6 +99,7 @@ int main(int argc, char **argv)
   else
   {
     printf("The process id is (%d).\n", pid);
+    fflush(stdout);
   }
 
   const char *bench_file = NULL;

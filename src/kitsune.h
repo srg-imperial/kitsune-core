@@ -51,6 +51,8 @@ void kitsune_note_var(const char *var_name, const char *funcname,
 
 void kitsune_note_heap(const char* name, void* addr);
 
+void kitsune_threads_reset_spurious(void);
+
 /**
  * \addtogroup manual
  * Macro that will define a function xform_func_ptr that will return the new

@@ -506,3 +506,6 @@ void ktthreads_ms_sleep(int timeInMs) {
   pthread_mutex_unlock(&fakeMutex);                                           
 } 
 
+void kitsune_threads_reset_spurious(void) {
+  *updated_count = 0;
+}

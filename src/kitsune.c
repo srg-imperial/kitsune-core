@@ -336,6 +336,9 @@ void kitsune_update(const char *pt_name)
       if (ret >= 0) {
         kitsune_log("Update canceled(%s)...\n", pt_name);
         kitsune_clear_request();
+
+        kitsune_threads_reset_spurious();
+
         return;
       }
 
